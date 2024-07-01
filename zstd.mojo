@@ -42,7 +42,7 @@ struct ZSTD:
     var _max_comp_level : Int32
     var _default_comp_level : Int32
 
-    fn __init__(inout self, handle : ffi.DLHandle):
+    fn __init__(inout self, owned handle : ffi.DLHandle):
         self._handle = handle
         self._min_comp_level = self._handle.get_function[ZSTD_minCLevel]("ZSTD_minCLevel")()  # minimum negative compression level allowed, requires v1.4.0+
         self._max_comp_level = self._handle.get_function[ZSTD_maxCLevel]("ZSTD_maxCLevel")()
@@ -172,8 +172,8 @@ struct ZSTD:
         original.resize(16384,0)
         var aaa = ZSTD.new()
         assert_true(aaa)
-        var zstd = aaa.value()
-        var recommended_size = zstd[].compress_bound(original.size)
+        var zstd = aaa.take()
+        var recommended_size = zstd.compress_bound(original.size)
         assert_true(recommended_size>original.size,"error while calling compress_bound")
 
         var compressed = List[UInt8]()
@@ -181,21 +181,21 @@ struct ZSTD:
 
         # first shot, best case : an easy to compressed file
         compressed.resize(recommended_size,0)
-        var result = zstd[].compress(compressed, original, zstd[].max_comp_level())
-        assert_false(zstd[].is_error(result),"error while compressing")
-        assert_equal(zstd[].get_error_name(result),"No error detected")
+        var result = zstd.compress(compressed, original, zstd.max_comp_level())
+        assert_false(zstd.is_error(result),"error while compressing")
+        assert_equal(zstd.get_error_name(result),"No error detected")
         # the compressed size must be smaller than the original size
         assert_true(result<original.size,"error while compressing")
         
         # we could resize compress with .resize(result)
         # but we're gonna use it as a dumb buffer
-        var tmp = zstd[].get_frame_content_size(compressed)
+        var tmp = zstd.get_frame_content_size(compressed)
         assert_true(tmp==original.size,"error while compressing or getting frame content size")
        
         uncompress.resize( int(tmp), 0)
-        result = zstd[].decompress(uncompress, compressed, result)
-        assert_false(zstd[].is_error(result),"error while decompressing")
-        assert_equal(zstd[].get_error_name(result),"No error detected")
+        result = zstd.decompress(uncompress, compressed, result)
+        assert_false(zstd.is_error(result),"error while decompressing")
+        assert_equal(zstd.get_error_name(result),"No error detected")
         assert_true(compare_list(original,uncompress),"result is not the same as source")
 
         # second shot, worst case : just noise
@@ -203,24 +203,24 @@ struct ZSTD:
         randint[DType.uint8](p, original.size, 0, 255)
         # a compressed file is usually smaller than the original, but we are compressing pure noise
         # so we should expect a bigger file, but not biggeer than the recommended size
-        result = zstd[].compress(compressed, original, zstd[].max_comp_level())
-        assert_false(zstd[].is_error(result),"error while compressing")
-        assert_equal(zstd[].get_error_name(result),"No error detected")
+        result = zstd.compress(compressed, original, zstd.max_comp_level())
+        assert_false(zstd.is_error(result),"error while compressing")
+        assert_equal(zstd.get_error_name(result),"No error detected")
         assert_true(result>=original.size,"error while compressing")
         
         # once again
-        tmp = zstd[].get_frame_content_size(compressed)
+        tmp = zstd.get_frame_content_size(compressed)
         assert_true(tmp==original.size,"error while compressing or getting frame content size")
-        result = zstd[].decompress(uncompress, compressed, result)
-        assert_false(zstd[].is_error(result),"error while decompressing")
-        assert_equal(zstd[].get_error_name(result),"No error detected")
+        result = zstd.decompress(uncompress, compressed, result)
+        assert_false(zstd.is_error(result),"error while decompressing")
+        assert_equal(zstd.get_error_name(result),"No error detected")
         assert_true(compare_list(original,uncompress),"result is not the same as source")
                       
         # to make things go wrong
         uncompress.resize( 1, 0)
-        result = zstd[].decompress(uncompress, compressed, result)
-        assert_true(zstd[].is_error(result),"error while decompressing")
-        assert_equal(zstd[].get_error_name(result),"Src size is incorrect")
+        result = zstd.decompress(uncompress, compressed, result)
+        assert_true(zstd.is_error(result),"error while decompressing")
+        assert_equal(zstd.get_error_name(result),"Src size is incorrect")
 
 
 fn main() raises:
